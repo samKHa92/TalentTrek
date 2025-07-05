@@ -1,0 +1,20 @@
+static_scrapers:
+  - name: Company Careers
+    url: https://careers.example.com/jobs
+    job_selector: .job-listing
+    fields:
+      title: .job-title
+      company: .company
+      location: .location
+      date_posted: .date
+
+dynamic_scrapers:
+  - name: LinkedIn Python Jobs
+    url: https://www.linkedin.com/jobs/search?keywords=python
+    job_selector: .job-card-container
+    fields:
+      title: .job-card-list__title
+      company: .job-card-container__company-name
+      location: .job-card-container__metadata-item
+      date_posted: .job-card-container__listed-time
+    scroll_count: 5

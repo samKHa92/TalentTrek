@@ -1,0 +1,34 @@
+sources:
+  - id: linkedin
+    name: LinkedIn
+    type: dynamic
+    search_url: "https://www.linkedin.com/jobs/search/?keywords={keyword}"
+    selectors:
+      job_selector: ".job-card-container"
+      title: ".artdeco-entity-lockup__title a"
+      company: ".artdeco-entity-lockup__subtitle span"
+      location: ".job-card-container__metadata-wrapper li span"
+    scroll_count: 5
+  - id: python_org
+    name: Python.org
+    type: static
+    search_url: "https://www.python.org/jobs/?q={keyword}"
+    selectors:
+      job_selector: "ol.list-recent-jobs > li"
+      title: "span.listing-company-name a"
+      company: "span.listing-company-name"
+      location: "span.listing-location a"
+      date_posted: "span.listing-posted time"
+  - id: weworkremotely
+    name: WeWorkRemotely
+    type: static
+    search_url: "https://weworkremotely.com/remote-jobs/search?term={keyword}"
+    selectors:
+      job_selector: "div.new-listing"
+      title: "div.new-listing__header__title"
+      company: "p.new-listing__company-name"
+      location: "p.new-listing__company-headquarters"
+      date_posted: "p.new-listing__header__icons__date"
+      salary:
+        type: multiple
+        selector: "div.new-listing__categories__category"

@@ -1,0 +1,29 @@
+# Node modules and Python virtual environments
+node_modules/
+env/
+venv/
+ENV/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Output and build artifacts
+*.log
+data_output/
+dist/
+build/
+
+# IDE/editor folders
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore 

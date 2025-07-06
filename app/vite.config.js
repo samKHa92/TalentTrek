@@ -19,7 +19,7 @@ export default defineConfig({
     },
     hmr: {
       port: 5173,
-      host: 'localhost'
+      host: process.env.VITE_HMR_HOST || '0.0.0.0'
     }
   },
   optimizeDeps: {

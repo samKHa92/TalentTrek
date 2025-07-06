@@ -35,4 +35,5 @@ services:
     environment:
       - VITE_API_URL=http://localhost:8000
       - NODE_ENV=development
+      - VITE_HMR_HOST=0.0.0.0
     command: ["npm", "run", "dev"] 

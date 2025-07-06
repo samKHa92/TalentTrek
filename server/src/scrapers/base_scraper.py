@@ -41,6 +41,7 @@ class BaseScraper:
                 request_headers['User-Agent'] = ua
 
                 logger.info(f"[Request] {url} | Attempt: {retries + 1}")
+                logger.debug(f"Request headers: {request_headers}")
                 response = self.session.request(
                     method=method,
                     url=url,

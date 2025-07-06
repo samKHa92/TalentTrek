@@ -11,11 +11,11 @@ if errorlevel 1 (
 
 REM Stop any existing containers
 echo 🛑 Stopping any existing containers...
-docker-compose -f docker-compose.dev.yml down 2>nul
+docker-compose -f assembly/dev/docker-compose.dev.yml down 2>nul
 
 REM Build and start development environment
 echo 📦 Building development containers...
-docker-compose -f docker-compose.dev.yml build
+docker-compose -f assembly/dev/docker-compose.dev.yml build
 
 if errorlevel 1 (
     echo ❌ Build failed. Please check the error messages above.
@@ -24,7 +24,7 @@ if errorlevel 1 (
 )
 
 echo 🔥 Starting services with auto-reload...
-docker-compose -f docker-compose.dev.yml up
+docker-compose -f assembly/dev/docker-compose.dev.yml up
 
 echo.
 echo ✅ Development environment started!

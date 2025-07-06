@@ -3,7 +3,7 @@ from sqlalchemy.orm import sessionmaker
 from src.data.models import Base
 from src.utils.logger import get_logger
 from src.utils.config import get_config
-from src.utils.supabase import supabase_config
+from src.supabase.supabase import supabase_config
 
 logger = get_logger(__name__)
 

@@ -4,7 +4,7 @@
   <img src="https://placehold.co/300x80?text=TalentTrek+Logo" alt="TalentTrek Logo" height="80"/>
 </p>
 
-⛰️ A multi-source data scraping and analytics platform for job market insights. TalentTrek collects, cleans, analyzes, and reports on job postings from multiple sources, supporting static and dynamic scraping, advanced analysis, and interactive HTML reporting.
+⛰️ A multi-source job scraping platform for collecting and saving job postings. TalentTrek scrapes jobs from multiple sources, allows users to save scraped jobs as reports, and provides a simple interface for job search and data collection.
 
 ---
 
@@ -12,12 +12,11 @@
 
 ✅ Scrape jobs from static and JavaScript-heavy pages (BeautifulSoup, Selenium, Scrapy)  
 ✅ Clean and deduplicate scraped data  
-✅ Analyze top titles, companies, job location distribution, and salary trends  
-✅ Generate interactive HTML reports with charts and tables  
-✅ Command-line interface and Makefile for easy pipeline execution  
-✅ Modular architecture with unit, integration, and fixture tests  
+✅ Save scraped jobs as reports for future reference  
+✅ User authentication and report management  
+✅ User can select from predefined sources (e.g., LinkedIn, python.org, WeWorkRemotely) and provide a keyword to search across multiple sources simultaneously  
 ✅ Docker support for reproducible runs  
-✅ User can select from predefined sources (e.g., LinkedIn, python.org, WeWorkRemotely) and provide a keyword to search across multiple sources simultaneously
+✅ Modular architecture with unit, integration, and fixture tests
 
 ---
 
@@ -55,10 +54,10 @@ For faster development with auto-reload:
 1. **Start development environment:**
    ```bash
    # Windows
-   dev.bat
+   env/dev.bat
    
    # Linux/Mac
-   ./dev.sh
+   ./env/dev.sh
    
    # Or use Makefile
    make dev
@@ -100,8 +99,9 @@ TalentTrek now supports a flexible, user-driven scraping workflow:
 1. **User opens the dashboard** and sees a list of available sources (LinkedIn, python.org, WeWorkRemotely, etc.).
 2. **User enters a keyword** (e.g., `python developer`).
 3. **User selects one or more sources** to search in.
-4. **User clicks "Scrape Selected Sources"**. The backend scrapes all selected sources using the keyword and returns the results.
+4. **User clicks "Scrape Jobs"**. The backend scrapes all selected sources using the keyword and returns the results.
 5. **Results are shown in a table** with job title, company, location, source, and link.
+6. **User can click "Save Report"** to save all scraped jobs as a report for future reference.
 
 ### API Endpoints
 
@@ -149,10 +149,18 @@ sources:
 
 ---
 
-## Deep Project Structure
+## Project Structure
 
 ```
 TalentTrek/
+├── env/                    # Environment and deployment files
+│   ├── dev.sh             # Development startup script (Linux/macOS)
+│   ├── dev.bat            # Development startup script (Windows)
+│   ├── prod.sh            # Production startup script (Linux/macOS)
+│   ├── prod.bat           # Production startup script (Windows)
+│   ├── docker-compose.yml # Production Docker Compose
+│   ├── docker-compose.dev.yml # Development Docker Compose
+│   └── README.md          # Environment documentation
 ├── app/
 │   ├── Dockerfile
 │   ├── eslint.config.js
@@ -182,15 +190,14 @@ TalentTrek/
 │   ├── config/
 │   │   ├── scrapers.yaml
 │   │   ├── settings.yaml
-│   │   ├── sources.yaml
-│   │   └── urls.json
+│   │   └── sources.yaml
 │   ├── data_output/
 │   │   ├── jobs.db
-│   │   ├── processed/
-│   │   ├── raw/
-│   │   └── reports/
+│   │   └── raw/
 │   ├── Dockerfile
-│   ├── init_supabase_db.py
+│   ├── src/
+│   │   ├── supabase/
+│   │   │   ├── init_supabase_db.py
 │   ├── main.py
 │   ├── requirements.txt
 │   └── src/
@@ -549,6 +556,105 @@ Users can:
 - `GET /api/auth/reports` — Get all user reports
 - `GET /api/auth/reports/{report_id}` — Get specific report
 - `DELETE /api/auth/reports/{report_id}` — Delete a report
+
+## Database Migrations
+
+TalentTrek uses Alembic for database migrations, providing version-controlled schema changes and safe database updates.
+
+### Migration Files
+
+- `0001_initial_schema.py` - Creates the initial database schema with all tables
+- `0002_migrate_old_reports.py` - Migrates old report structure to new simplified structure
+
+### How to Use Migrations
+
+#### Initial Setup (New Project)
+```bash
+# 1. Apply all migrations to create tables
+make dev-backend-migrate
+
+# 2. (Optional) Create sample data for testing
+make dev-backend-seed
+```
+
+#### Apply All Migrations
+```bash
+# Development
+make dev-backend-migrate
+
+# Production
+make prod-backend-migrate
+```
+
+#### Migration Management Commands
+```bash
+# Check migration status
+make dev-backend-migrate-status
+
+# Show migration history
+make dev-backend-migrate-history
+
+# Create new migration (after model changes)
+make dev-backend-migrate-create "Description of changes"
+```
+
+#### Manual Migration Commands
+```bash
+# Apply all pending migrations
+alembic upgrade head
+
+# Apply specific migration
+alembic upgrade 0002
+
+# Rollback one migration
+alembic downgrade -1
+
+# Rollback to specific migration
+alembic downgrade 0001
+
+# Check current migration status
+alembic current
+
+# Show migration history
+alembic history
+```
+
+### Migration Workflow
+
+1. **Make model changes** in `server/src/data/models.py`
+2. **Generate migration**: `make dev-backend-migrate-create "Description"`
+3. **Review generated migration** in `server/migrations/versions/` directory
+4. **Test migration**: `make dev-backend-migrate` (dev)
+5. **Apply to production**: `make prod-backend-migrate` (prod)
+
+### Migration Best Practices
+
+1. **Always test migrations** on development database first
+2. **Backup production data** before applying migrations
+3. **Write reversible migrations** - include both upgrade and downgrade
+4. **Use descriptive names** for migration files
+5. **Test rollback procedures** before production deployment
+
+### Troubleshooting
+
+#### Migration Conflicts
+If you get conflicts between migrations:
+1. Check migration history: `alembic history`
+2. Identify conflicting migrations
+3. Resolve conflicts manually in migration files
+4. Test thoroughly before applying
+
+#### Database Connection Issues
+- Ensure database URL is correct in environment variables
+- Check Supabase configuration
+- Verify network connectivity
+
+#### Rollback Issues
+- Always test rollback procedures
+- Keep backups before major migrations
+- Consider data loss implications
+
+---
 
 ## Environment Variables
 

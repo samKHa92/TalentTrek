@@ -1,136 +1,229 @@
-# Both server and frontend together
+# TalentTrek Makefile - Development and Production Commands
 
-setup:
-	docker-compose build server app
-	docker-compose up -d server app
+# =============================================================================
+# DEVELOPMENT COMMANDS (with auto-reload)
+# =============================================================================
 
-up:
-	docker-compose up -d server app
-
-build:
-	docker-compose build server app
-
-down:
-	docker-compose down
-
-restart:
-	docker-compose down
-	docker-compose up -d server app
-
-rebuild:
-	docker-compose down
-	docker-compose build server app
-
-re:
-	docker-compose down
-	docker-compose build server app
-	docker-compose up -d server app
-
-# Development with auto-reload
 dev:
-	docker-compose -f docker-compose.dev.yml up --build
+	docker-compose -f assembly/dev/docker-compose.dev.yml up --build
 
 dev-build:
-	docker-compose -f docker-compose.dev.yml build
+	docker-compose -f assembly/dev/docker-compose.dev.yml build
 
 dev-up:
-	docker-compose -f docker-compose.dev.yml up -d
+	docker-compose -f assembly/dev/docker-compose.dev.yml up -d
 
 dev-down:
-	docker-compose -f docker-compose.dev.yml down
+	docker-compose -f assembly/dev/docker-compose.dev.yml down
 
 dev-logs:
-	docker-compose -f docker-compose.dev.yml logs -f
+	docker-compose -f assembly/dev/docker-compose.dev.yml logs -f
 
 dev-restart:
-	docker-compose -f docker-compose.dev.yml restart
+	docker-compose -f assembly/dev/docker-compose.dev.yml restart
 
-dev-init-db:
-	docker-compose -f docker-compose.dev.yml exec -T server python init_supabase_db.py
 
-# Local development
-local-backend:
-	cd server && uvicorn src.api.v1:app --reload --host 0.0.0.0 --port 8000
+# =============================================================================
+# BACKEND TASKS (Development)
+# =============================================================================
 
-local-frontend:
-	cd app && npm run dev
+dev-backend-init:
+	docker-compose -f assembly/dev/docker-compose.dev.yml run server python main.py
 
-# Docker Compose
+dev-backend-init-auth:
+	docker-compose -f assembly/dev/docker-compose.dev.yml run server python init_auth_db.py
 
-docker-build:
-	docker-compose build
+dev-migrate:
+	docker-compose -f assembly/dev/docker-compose.dev.yml run server alembic upgrade head
 
-docker-up:
-	docker-compose up -d
+dev-migrate-create:
+	docker-compose -f assembly/dev/docker-compose.dev.yml run server alembic revision --autogenerate -m
 
-docker-down:
-	docker-compose down
+dev-backend-migrate-status:
+	docker-compose -f assembly/dev/docker-compose.dev.yml run server alembic current
 
-docker-logs:
-	docker-compose logs -f
+dev-backend-migrate-history:
+	docker-compose -f assembly/dev/docker-compose.dev.yml run server alembic history
 
-# Backend tasks via Docker Compose
+dev-backend-seed:
+	docker-compose -f assembly/dev/docker-compose.dev.yml run server python src/supabase/seed_data.py
 
-docker-backend-init:
-	docker-compose run server python main.py
+dev-backend-scrape:
+	docker-compose -f assembly/dev/docker-compose.dev.yml run server python -m src.cli.interface scrape
 
-docker-backend-init-auth:
-	docker-compose run server python init_auth_db.py
+dev-backend-test:
+	docker-compose -f assembly/dev/docker-compose.dev.yml run server pytest
 
-docker-backend-init-supabase:
-	docker-compose run server python init_supabase_db.py
+# =============================================================================
+# PRODUCTION COMMANDS
+# =============================================================================
 
-docker-backend-scrape:
-	docker-compose run server python -m src.cli.interface scrape
+prod:
+	docker-compose -f assembly/prod/docker-compose.yml up -d --build
 
-docker-backend-analyze:
-	docker-compose run server python -m src.cli.interface analyze
+prod-build:
+	docker-compose -f assembly/prod/docker-compose.yml build
 
-docker-backend-report:
-	docker-compose run server python -m src.cli.interface report
+prod-up:
+	docker-compose -f assembly/prod/docker-compose.yml up -d
 
-docker-backend-test:
-	docker-compose run server pytest
+prod-down:
+	docker-compose -f assembly/prod/docker-compose.yml down
 
-# Makefile for TalentTrek: Local and Docker-based commands
-.PHONY: help local-backend local-frontend docker-build docker-up docker-down docker-logs \
-        docker-backend-init docker-backend-init-auth docker-backend-init-supabase docker-backend-scrape docker-backend-analyze docker-backend-report docker-backend-test \
-        dev dev-build dev-up dev-down dev-logs dev-restart
+prod-logs:
+	docker-compose -f assembly/prod/docker-compose.yml logs -f
+
+prod-restart:
+	docker-compose -f assembly/prod/docker-compose.yml restart
+
+prod-init-db:
+	docker-compose -f assembly/prod/docker-compose.yml run server python src/supabase/init_supabase_db.py
+
+# =============================================================================
+# BACKEND TASKS (Production)
+# =============================================================================
+
+prod-backend-init:
+	docker-compose -f assembly/prod/docker-compose.yml run server python main.py
+
+prod-backend-init-auth:
+	docker-compose -f assembly/prod/docker-compose.yml run server python init_auth_db.py
+
+prod-migrate:
+	docker-compose -f assembly/prod/docker-compose.yml run server alembic upgrade head
+
+prod-migrate-status:
+	docker-compose -f assembly/prod/docker-compose.yml run server alembic current
+
+prod-backend-migrate-history:
+	docker-compose -f assembly/prod/docker-compose.yml run server alembic history
+
+prod-backend-seed:
+	docker-compose -f assembly/prod/docker-compose.yml run server python src/supabase/seed_data.py
+
+prod-backend-scrape:
+	docker-compose -f assembly/prod/docker-compose.yml run server python -m src.cli.interface scrape
+
+prod-backend-test:
+	docker-compose -f assembly/prod/docker-compose.yml run server pytest
+
+# =============================================================================
+# UTILITY COMMANDS
+# =============================================================================
+
+clean:
+	docker-compose -f assembly/prod/docker-compose.yml down -v --remove-orphans
+	docker-compose -f assembly/dev/docker-compose.dev.yml down -v --remove-orphans
+	docker system prune -f
+
+clean-dev:
+	docker-compose -f assembly/dev/docker-compose.dev.yml down -v --remove-orphans
+
+clean-prod:
+	docker-compose -f assembly/prod/docker-compose.yml down -v --remove-orphans
+
+dev-expose-host:
+	@echo "Starting LinkedIn OAuth with host networking..."
+	@echo "This will expose port 5173 to your host machine"
+	@echo "Make sure your LinkedIn app redirect URL is set to: http://YOUR_HOST_IP:5173/callback"
+	@echo ""
+	@echo "Note: You need to manually set HOST_IP environment variable"
+	@echo "Example: HOST_IP=192.168.1.100 make dev-expose-host"
+	@echo ""
+	docker-compose -f env/docker-compose.dev.yml run --network host server python -c "from src.utils.linkedin_auth import linkedin_auth; linkedin_auth.generate_token()"
+
+prod-expose-host:
+	@echo "Starting LinkedIn OAuth with host networking..."
+	@echo "This will expose port 5173 to your host machine"
+	@echo "Make sure your LinkedIn app redirect URL is set to: http://YOUR_HOST_IP:5173/callback"
+	@echo ""
+	@echo "Note: You need to manually set HOST_IP environment variable"
+	@echo "Example: HOST_IP=192.168.1.100 make prod-expose-host"
+	@echo ""
+	docker-compose -f assembly/prod/docker-compose.yml run --network host server python -c "from src.utils.linkedin_auth import linkedin_auth; linkedin_auth.generate_token()"
+
+check-host-ip:
+	@echo "Your host machine IP addresses:"
+	@echo "================================"
+	@echo ""
+	@echo "Windows: Run 'ipconfig' in PowerShell to see your IP addresses"
+	@echo "Linux/Mac: Run 'hostname -I' in terminal to see your IP addresses"
+	@echo ""
+	@echo "For LinkedIn OAuth:"
+	@echo "1. Look for your local network IP (usually starts with 192.168.x.x or 10.x.x.x)"
+	@echo "2. Update your LinkedIn app redirect URL to: http://YOUR_IP:5173/callback"
+	@echo "3. Example: http://192.168.1.100:5173/callback"
+
+# =============================================================================
+# HELP
+# =============================================================================
+
+.PHONY: help dev dev-build dev-up dev-down dev-logs dev-restart dev-init-db \
+        prod prod-build prod-up prod-down prod-logs prod-restart prod-init-db \
+        prod-backend-init prod-backend-init-auth \
+        prod-backend-migrate prod-backend-migrate-status prod-backend-migrate-history prod-backend-seed prod-backend-scrape prod-backend-test \
+        dev-backend-init dev-backend-init-auth \
+        dev-backend-migrate dev-backend-migrate-create dev-backend-migrate-status dev-backend-migrate-history dev-backend-seed dev-backend-scrape dev-backend-test \
+        dev-expose-host prod-expose-host check-host-ip \
+        clean clean-dev clean-prod
 
 help:
-	@echo "Available targets:"
+	@echo "TalentTrek Makefile Commands"
+	@echo "============================"
 	@echo ""
-	@echo "Production (Docker):"
-	@echo "  setup                Build and start both server and frontend (Docker)"
-	@echo "  up                   Start both server and frontend together (Docker)"
-	@echo "  build                Build both server and frontend together (Docker)"
-	@echo "  down                 Stop both server and frontend together (Docker)"
-	@echo "  restart              Restart both server and frontend together (Docker)"
-	@echo "  rebuild              Rebuild both server and frontend together (Docker) and start"
-	@echo "  re                   Rebuild and restart both server and frontend together (Docker)"
-	@echo ""
-	@echo "Development (Auto-reload):"
+	@echo "DEVELOPMENT COMMANDS (with auto-reload):"
 	@echo "  dev                  Start development environment with auto-reload"
 	@echo "  dev-build            Build development containers"
-	@echo "  dev-up               Start development environment"
+	@echo "  dev-up               Start development environment in background"
 	@echo "  dev-down             Stop development environment"
 	@echo "  dev-logs             Show development logs"
 	@echo "  dev-restart          Restart development environment"
-	@echo "  dev-init-db          Initialize database tables"
+	@echo "  dev-init-db          Initialize database tables (dev)"
 	@echo ""
-	@echo "Local Development:"
-	@echo "  local-backend        Run backend locally (requires Python env)"
-	@echo "  local-frontend       Run frontend locally (requires Node env)"
+	@echo "BACKEND TASKS (Development):"
+	@echo "  dev-backend-init     Initialize backend (dev)"
+	@echo "  dev-backend-init-auth Initialize auth database (dev)"
+	@echo "  dev-migrate   Apply all migrations (dev)"
+	@echo "  dev-migrate-create Create new migration (dev)"
+	@echo "  dev-backend-migrate-status Check migration status (dev)"
+	@echo "  dev-backend-migrate-history Show migration history (dev)"
+	@echo "  dev-backend-seed     Create sample data (dev)"
+	@echo "  dev-backend-scrape   Run scraping (dev)"
+	@echo "  dev-backend-test     Run backend tests (dev)"
 	@echo ""
-	@echo "Docker Commands:"
-	@echo "  docker-build         Build all Docker images"
-	@echo "  docker-up            Start all services with Docker Compose"
-	@echo "  docker-down          Stop all Docker Compose services"
-	@echo "  docker-logs          Show logs for all Docker Compose services"
-	@echo "  docker-backend-init  Init backend DB via Docker"
-	@echo "  docker-backend-init-auth Init backend DB with authentication via Docker"
-	@echo "  docker-backend-init-supabase Init backend DB with Supabase PostgreSQL via Docker"
-	@echo "  docker-backend-scrape Run scraping via Docker"
-	@echo "  docker-backend-analyze Run analysis via Docker"
-	@echo "  docker-backend-report Run report via Docker"
-	@echo "  docker-backend-test  Run backend tests via Docker"
+	@echo "PRODUCTION COMMANDS:"
+	@echo "  prod                 Start production environment"
+	@echo "  prod-build           Build production containers"
+	@echo "  prod-up              Start production environment in background"
+	@echo "  prod-down            Stop production environment"
+	@echo "  prod-logs            Show production logs"
+	@echo "  prod-restart         Restart production environment"
+	@echo "  prod-init-db         Initialize database tables (prod)"
+	@echo ""
+	@echo "BACKEND TASKS (Production):"
+	@echo "  prod-backend-init    Initialize backend (prod)"
+	@echo "  prod-backend-init-auth Initialize auth database (prod)"
+	@echo "  prod-migrate  Apply all migrations (prod)"
+	@echo "  prod-migrate-status Check migration status (prod)"
+	@echo "  prod-backend-migrate-history Show migration history (prod)"
+	@echo "  prod-backend-seed    Create sample data (prod)"
+	@echo "  prod-backend-scrape  Run scraping (prod)"
+	@echo "  prod-backend-test    Run backend tests (prod)"
+	@echo ""
+	@echo "UTILITY COMMANDS:"
+	@echo "  clean                Clean all containers and volumes"
+	@echo "  clean-dev            Clean development containers and volumes"
+	@echo "  clean-prod           Clean production containers and volumes"
+	@echo "  check-host-ip        Show your host machine IP addresses"
+	@echo "  dev-expose-host      Start OAuth with host networking (dev)"
+	@echo "  prod-expose-host     Start OAuth with host networking (prod)"
+	@echo ""
+	@echo "URLs:"
+	@echo "  Development:"
+	@echo "    Frontend: http://localhost:5173"
+	@echo "    Backend:  http://localhost:8000"
+	@echo "    API Docs: http://localhost:8000/docs"
+	@echo "  Production:"
+	@echo "    Frontend: http://localhost:3000"
+	@echo "    Backend:  http://localhost:8000"
+	@echo "    API Docs: http://localhost:8000/docs" 

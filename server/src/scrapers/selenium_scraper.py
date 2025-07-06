@@ -25,24 +25,42 @@ class SeleniumScraper(BaseScraper):
         chrome_options.add_argument("--disable-blink-features=AutomationControlled")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--remote-debugging-port=9222")
+        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument("--disable-plugins")
+        chrome_options.add_argument("--disable-images")
+        chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
         # Use webdriver-manager to install and set up the right chromedriver
-        chromedriver_dir = os.path.dirname(ChromeDriverManager().install())
-        print("CHROMEDRIVER DIR:", chromedriver_dir)
-        print("CHROMEDRIVER DIR CONTENTS:", os.listdir(chromedriver_dir))
-        chromedriver_path = os.path.join(chromedriver_dir, "chromedriver")
-        if not os.path.exists(chromedriver_path):
-            print("ERROR: chromedriver binary not found at:", chromedriver_path)
-        else:
-            print("USING CHROMEDRIVER:", chromedriver_path)
+        try:
+            chromedriver_dir = os.path.dirname(ChromeDriverManager().install())
+            logger.info(f"ChromeDriver directory: {chromedriver_dir}")
+            chromedriver_path = os.path.join(chromedriver_dir, "chromedriver")
+            
+            if not os.path.exists(chromedriver_path):
+                logger.error(f"ChromeDriver binary not found at: {chromedriver_path}")
+                raise FileNotFoundError(f"ChromeDriver not found at {chromedriver_path}")
+            
+            logger.info(f"Using ChromeDriver: {chromedriver_path}")
             try:
                 os.chmod(chromedriver_path, 0o755)
             except Exception as e:
-                print("ERROR setting executable permissions:", e)
-        self.driver = webdriver.Chrome(
-            service=Service(chromedriver_path),
-            options=chrome_options
-        )
+                logger.warning(f"Could not set executable permissions: {e}")
+            
+            self.driver = webdriver.Chrome(
+                service=Service(chromedriver_path),
+                options=chrome_options
+            )
+        except Exception as e:
+            logger.error(f"Failed to initialize Chrome driver: {e}")
+            # Fallback: try without specifying the path
+            try:
+                self.driver = webdriver.Chrome(options=chrome_options)
+                logger.info("Chrome driver initialized with fallback method")
+            except Exception as fallback_error:
+                logger.error(f"Fallback Chrome driver initialization also failed: {fallback_error}")
+                raise
 
     def login_linkedin(self):
         email = os.environ.get('LINKEDIN_EMAIL')
@@ -93,9 +111,6 @@ class SeleniumScraper(BaseScraper):
                     logger.debug(f"Scrolled page {i + 1}/{scroll_count} times.")
 
             page_source = self.driver.page_source
-
-            with open("linkedin_debug.html", "w", encoding="utf-8") as f:
-                f.write(page_source)
 
             soup = BeautifulSoup(page_source, "html.parser")
             job_elements = soup.select(job_selector)

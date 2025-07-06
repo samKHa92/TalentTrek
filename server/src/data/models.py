@@ -28,8 +28,10 @@ class UserReport(Base):
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     title = Column(String(255), nullable=False)
     description = Column(Text)
-    report_data = Column(Text, nullable=False)  # JSON string of report data
-    report_type = Column(String(50), nullable=False)  # 'scrape', 'analysis', 'trends'
+    jobs_data = Column(Text, nullable=False)  # JSON string of scraped jobs
+    keyword = Column(String(255))  # Search keyword used
+    sources_used = Column(Text)  # JSON string of source IDs used
+    job_count = Column(Integer, default=0)  # Number of jobs in the report
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationship to user

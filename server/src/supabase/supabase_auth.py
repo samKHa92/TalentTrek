@@ -2,7 +2,7 @@ from typing import Optional, Dict, Any
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from supabase import Client
-from src.utils.supabase import supabase_config
+from src.supabase.supabase import supabase_config
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)

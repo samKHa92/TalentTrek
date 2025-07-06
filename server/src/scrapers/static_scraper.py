@@ -16,8 +16,7 @@ class StaticScraper(BaseScraper):
             logger.warning(f"Failed to fetch {url} with status code: {getattr(response, 'status_code', None)}")
             return []
 
-        with open("static_debug.html", "w", encoding="utf-8") as f:
-            f.write(response.text)
+
 
         soup = BeautifulSoup(response.content, "html.parser")
         job_elements = soup.select(job_selector)

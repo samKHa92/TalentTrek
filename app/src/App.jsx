@@ -1,16 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Typography, Button, Stack, Snackbar, Alert, Paper, CircularProgress, Box, TextField, Divider, IconButton, List, ListItem, ListItemText, ListItemSecondaryAction, AppBar, Toolbar, Avatar, Menu, MenuItem } from '@mui/material';
+import React, { useState, useEffect, useRef } from 'react';
+import { Typography, Button, Stack, Snackbar, Alert, Paper, CircularProgress, Box, TextField, IconButton, List, ListItem, ListItemText, AppBar, Toolbar, Avatar, Menu, MenuItem } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import AssessmentIcon from '@mui/icons-material/Assessment';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import ScienceIcon from '@mui/icons-material/Science';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+
 import LogoutIcon from '@mui/icons-material/Logout';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import axios from 'axios';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
@@ -23,10 +20,7 @@ function capitalizeWords(str) {
 function AppContent() {
   const [loading, setLoading] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
-  const [report, setReport] = useState(null);
-  const [urls, setUrls] = useState({ static_urls: [], dynamic_urls: [] });
-  const [newStaticUrl, setNewStaticUrl] = useState('');
-  const [newDynamicUrl, setNewDynamicUrl] = useState('');
+
   const [sources, setSources] = useState([]);
   const [selectedSources, setSelectedSources] = useState([]);
   const [keyword, setKeyword] = useState('');
@@ -37,6 +31,7 @@ function AppContent() {
   const [emailVerification, setEmailVerification] = useState(null); // 'verifying', 'success', 'error', or null
 
   const { user, isAuthenticated, logout, loading: authLoading } = useAuth();
+  const userReportsRef = useRef();
 
   // Check for email verification on mount
   useEffect(() => {
@@ -62,12 +57,7 @@ function AppContent() {
     }
   }, []);
 
-  // Fetch URLs on mount
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchUrls();
-    }
-  }, [isAuthenticated]);
+
 
   // Fetch sources on mount
   useEffect(() => {
@@ -76,54 +66,40 @@ function AppContent() {
     }
   }, [isAuthenticated]);
 
-  const fetchUrls = async () => {
-    try {
-      const res = await axios.get('/api/urls');
-      setUrls(res.data);
-    } catch (err) {
-      setSnackbar({ open: true, message: 'Failed to fetch URLs', severity: 'error' });
-    }
-  };
 
-  const handleAction = async (action) => {
-    setLoading(action);
-    setSnackbar({ open: true, message: `Running ${action}...`, severity: 'info' });
+
+  const handleSaveReport = async () => {
+    if (scrapedJobs.length === 0) {
+      setSnackbar({ open: true, message: 'No jobs to save. Please scrape some jobs first.', severity: 'warning' });
+      return;
+    }
+    
+    setLoading('save');
+    setSnackbar({ open: true, message: 'Saving report...', severity: 'info' });
     try {
-      const res = await axios.post('/api/' + action);
-      setSnackbar({ open: true, message: `${action} complete!`, severity: 'success' });
-      if (action === 'report') {
-        setReport(res.data);
+      const reportData = {
+        title: `Job Search: ${keyword}`,
+        description: `Jobs scraped for keyword "${keyword}" from ${selectedSources.length} sources`,
+        jobs_data: JSON.stringify(scrapedJobs),
+        keyword: keyword,
+        sources_used: JSON.stringify(selectedSources),
+        job_count: scrapedJobs.length
+      };
+      
+      await axios.post('/api/supabase-auth/reports', reportData);
+      setSnackbar({ open: true, message: 'Report saved successfully!', severity: 'success' });
+      // Refresh the reports list
+      if (userReportsRef.current && userReportsRef.current.loadReports) {
+        userReportsRef.current.loadReports();
       }
     } catch (err) {
-      setSnackbar({ open: true, message: `Error: ${err.response?.data || err.message}`, severity: 'error' });
+      setSnackbar({ open: true, message: `Error saving report: ${err.response?.data?.detail || err.message}`, severity: 'error' });
     } finally {
       setLoading('');
     }
   };
 
-  const handleAddUrl = async (type) => {
-    const url = type === 'static' ? newStaticUrl : newDynamicUrl;
-    if (!url) return;
-    try {
-      await axios.post('/api/urls/' + (type === 'static' ? 'static' : 'dynamic'), { url });
-      setSnackbar({ open: true, message: `Added ${type} URL!`, severity: 'success' });
-      fetchUrls();
-      if (type === 'static') setNewStaticUrl('');
-      else setNewDynamicUrl('');
-    } catch (err) {
-      setSnackbar({ open: true, message: `Error: ${err.response?.data?.detail || err.message}`, severity: 'error' });
-    }
-  };
 
-  const handleRemoveUrl = async (type, url) => {
-    try {
-      await axios.delete('/api/urls/' + (type === 'static' ? 'static' : 'dynamic'), { data: { url } });
-      setSnackbar({ open: true, message: `Removed ${type} URL!`, severity: 'success' });
-      fetchUrls();
-    } catch (err) {
-      setSnackbar({ open: true, message: `Error: ${err.response?.data?.detail || err.message}`, severity: 'error' });
-    }
-  };
 
   const handleSourceToggle = (id) => {
     setSelectedSources(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
@@ -229,11 +205,10 @@ function AppContent() {
     }
   }
 
-  // Move actions array here so it can use handleScrapeJobs
+  // Actions for job scraping and saving
   const actions = [
     { key: 'scrape', label: 'Scrape Jobs', icon: <PlayArrowIcon fontSize="large" />, onClick: handleScrapeJobs },
-    { key: 'analyze', label: 'Analyze Data', icon: <ScienceIcon fontSize="large" /> },
-    { key: 'report', label: 'Generate Report', icon: <AssessmentIcon fontSize="large" /> },
+    { key: 'save', label: 'Save Report', icon: <AssessmentIcon fontSize="large" />, onClick: handleSaveReport },
   ];
 
   return (
@@ -315,8 +290,8 @@ function AppContent() {
                   key={key}
                   variant="contained"
                   startIcon={icon}
-                  onClick={onClick || (() => handleAction(key))}
-                  disabled={!!loading || (key === 'scrape' && (scraping || !keyword || selectedSources.length === 0))}
+                  onClick={onClick}
+                  disabled={!!loading || (key === 'scrape' && (scraping || !keyword || selectedSources.length === 0)) || (key === 'save' && scrapedJobs.length === 0)}
                   color={key === loading ? 'secondary' : 'primary'}
                   size="large"
                   sx={{ width: { xs: '97%', sm: '90%', md: 375 }, justifyContent: 'center', fontWeight: 600, fontSize: 18, alignSelf: 'center' }}
@@ -328,117 +303,14 @@ function AppContent() {
           </Box>
         </Box>
 
-        {/* Main Report Area */}
+        {/* Main Content Area */}
         <Box sx={{ flex: 1, p: 4, display: 'flex', flexDirection: 'column', minHeight: '100vh', overflowY: 'auto', overflowX: 'hidden', width: '97%' }}>
           {/* User Reports Section */}
           <Paper elevation={2} sx={{ p: 3, mb: 3, bgcolor: '#232936', color: '#fff', width: '97%', maxWidth: '97%' }}>
             <UserReports 
-              reportData={report} 
+              ref={userReportsRef}
               onSaveSuccess={() => setSnackbar({ open: true, message: 'Report saved successfully!', severity: 'success' })}
             />
-          </Paper>
-
-          {/* Report Visualization */}
-          <Paper elevation={2} sx={{ p: 3, mb: 3, bgcolor: '#232936', color: '#fff', width: '97%', maxWidth: '97%' }}>
-            <Typography variant="h5" gutterBottom color="#fff">
-              Report Visualization
-            </Typography>
-            {report ? (
-              <Box>
-                <Button
-                  variant="outlined"
-                  sx={{ mb: 2 }}
-                  onClick={() => window.open('/api/report/html', '_blank')}
-                >
-                  Open Full HTML Report
-                </Button>
-                {/* Statistics */}
-                <Typography variant="h6" color="#fff" gutterBottom>Key Statistics</Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
-                  {report.stats && Object.entries(report.stats).map(([key, value]) => (
-                    <Paper key={key} sx={{ p: 2, minWidth: 180, bgcolor: '#2d3341', color: '#fff' }}>
-                      <Typography variant="subtitle2" color="#b0b3b8">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</Typography>
-                      {typeof value === 'object' && value !== null ? (
-                        <ul style={{ margin: 0, paddingLeft: 16 }}>
-                          {Object.entries(value).map(([k, v]) => (
-                            <li key={k}><b>{k}</b>: {v}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <Typography variant="h6" color="#fff">{value}</Typography>
-                      )}
-                    </Paper>
-                  ))}
-                </Box>
-
-                {/* Trends Chart */}
-                {report.trends && report.trends.length > 0 && (
-                  <Box sx={{ mb: 3 }}>
-                    <Typography variant="h6" color="#fff" gutterBottom>Trends Over Time</Typography>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={report.trends}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                        <XAxis dataKey="date" stroke="#fff" />
-                        <YAxis stroke="#fff" />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: '#2d3341', 
-                            border: '1px solid #444',
-                            color: '#fff'
-                          }}
-                        />
-                        <Legend />
-                        <Line type="monotone" dataKey="count" stroke="#1976d2" strokeWidth={2} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </Box>
-                )}
-
-                {/* Sample Jobs */}
-                {report.sample_jobs && report.sample_jobs.length > 0 && (
-                  <Box>
-                    <Typography variant="h6" color="#fff" gutterBottom>Sample Job Postings</Typography>
-                    <List>
-                      {report.sample_jobs.map((job, index) => (
-                        <ListItem key={index} sx={{ bgcolor: '#2d3341', mb: 1, borderRadius: 1 }}>
-                          <ListItemText
-                            primary={
-                              <Typography variant="h6" color="#fff">
-                                {job.title || 'No title'}
-                              </Typography>
-                            }
-                            secondary={
-                              <Box>
-                                <Typography variant="body2" color="#ccc">
-                                  <strong>Company:</strong> {job.company || 'N/A'}
-                                </Typography>
-                                <Typography variant="body2" color="#ccc">
-                                  <strong>Location:</strong> {job.location || 'N/A'}
-                                </Typography>
-                                {job.salary && (
-                                  <Typography variant="body2" color="#ccc">
-                                    <strong>Salary:</strong> {job.salary}
-                                  </Typography>
-                                )}
-                                {job.date_posted && (
-                                  <Typography variant="body2" color="#ccc">
-                                    <strong>Posted:</strong> {job.date_posted}
-                                  </Typography>
-                                )}
-                              </Box>
-                            }
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Box>
-                )}
-              </Box>
-            ) : (
-              <Typography variant="body1" color="#ccc">
-                Generate a report to see visualizations here.
-              </Typography>
-            )}
           </Paper>
 
           {/* Scraped Jobs Display */}
@@ -475,6 +347,11 @@ function AppContent() {
                           {job.date_posted && (
                             <Typography variant="body2" color="#ccc">
                               <strong>Posted:</strong> {job.date_posted}
+                            </Typography>
+                          )}
+                          {job.url && (
+                            <Typography variant="body2" color="#ccc">
+                              <strong>URL:</strong> <a href={job.url} target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2' }}>{job.url}</a>
                             </Typography>
                           )}
                         </Box>

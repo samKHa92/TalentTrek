@@ -7,8 +7,8 @@ from pydantic import BaseModel
 from src.data.database import get_session
 from src.data.models import User, UserReport
 from src.schemas.auth import UserResponse, Token, UserReportCreate, UserReportResponse
-from src.utils.supabase_auth import supabase_auth
-from src.utils.supabase import supabase_config
+from src.supabase.supabase_auth import supabase_auth
+from src.supabase.supabase import supabase_config
 
 # Simple request models for auth
 class RegisterRequest(BaseModel):
@@ -130,13 +130,13 @@ def save_user_report(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Supabase Auth is not enabled"
         )
-    # Validate that report_data is valid JSON
+    # Validate that jobs_data is valid JSON
     try:
-        json.loads(report_data.report_data)
+        json.loads(report_data.jobs_data)
     except json.JSONDecodeError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid JSON in report_data"
+            detail="Invalid JSON in jobs_data"
         )
     # Get user from local database
     user = db.query(User).filter(User.email == current_user["email"]).first()
@@ -149,8 +149,10 @@ def save_user_report(
         user_id=user.id,
         title=report_data.title,
         description=report_data.description,
-        report_data=report_data.report_data,
-        report_type=report_data.report_type
+        jobs_data=report_data.jobs_data,
+        keyword=report_data.keyword,
+        sources_used=report_data.sources_used,
+        job_count=report_data.job_count
     )
     db.add(db_report)
     db.commit()

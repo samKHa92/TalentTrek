@@ -22,20 +22,25 @@ class Token(BaseModel):
     token_type: str = "bearer"
     expires_in: int  # minutes
 
-# User report schemas (still needed for our app functionality)
+# User report schemas (for job scraping reports)
 class UserReportBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
-    report_type: str = Field(..., pattern="^(scrape|analysis|trends)$")
 
 class UserReportCreate(UserReportBase):
-    report_data: str  # JSON string
+    jobs_data: str  # JSON string of scraped jobs
+    keyword: Optional[str] = None
+    sources_used: Optional[str] = None  # JSON string of source IDs
+    job_count: Optional[int] = 0
 
 class UserReportResponse(UserReportBase):
     id: int
     user_id: int
     created_at: datetime
-    report_data: str
+    jobs_data: str
+    keyword: Optional[str] = None
+    sources_used: Optional[str] = None
+    job_count: Optional[int] = 0
 
     class Config:
         from_attributes = True 

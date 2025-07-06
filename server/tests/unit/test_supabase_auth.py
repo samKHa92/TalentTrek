@@ -1,19 +1,19 @@
 import pytest
 from unittest.mock import Mock, patch
-from src.utils.supabase_auth import SupabaseAuth
-from src.utils.supabase import SupabaseConfig
+from src.supabase.supabase_auth import SupabaseAuth
+from src.supabase.supabase import SupabaseConfig
 
 class TestSupabaseAuth:
     """Test Supabase authentication utilities."""
     
-    @patch('src.utils.supabase_auth.supabase_config')
+    @patch('src.supabase.supabase_auth.supabase_config')
     def test_supabase_auth_initialization(self, mock_config):
         """Test Supabase Auth initialization."""
         mock_config.get_client.return_value = Mock()
         auth = SupabaseAuth()
         assert auth.client is not None
     
-    @patch('src.utils.supabase_auth.supabase_config')
+    @patch('src.supabase.supabase_auth.supabase_config')
     def test_verify_token_with_valid_token(self, mock_config):
         """Test token verification with valid token."""
         mock_client = Mock()
@@ -33,7 +33,7 @@ class TestSupabaseAuth:
         assert result["email"] == "test@example.com"
         assert result["user_metadata"]["username"] == "testuser"
     
-    @patch('src.utils.supabase_auth.supabase_config')
+    @patch('src.supabase.supabase_auth.supabase_config')
     def test_verify_token_with_invalid_token(self, mock_config):
         """Test token verification with invalid token."""
         mock_client = Mock()
@@ -45,7 +45,7 @@ class TestSupabaseAuth:
         
         assert result is None
     
-    @patch('src.utils.supabase_auth.supabase_config')
+    @patch('src.supabase.supabase_auth.supabase_config')
     def test_sign_up_success(self, mock_config):
         """Test successful user sign up."""
         mock_client = Mock()
@@ -64,7 +64,7 @@ class TestSupabaseAuth:
         assert "user" in result
         assert "session" in result
     
-    @patch('src.utils.supabase_auth.supabase_config')
+    @patch('src.supabase.supabase_auth.supabase_config')
     def test_sign_in_success(self, mock_config):
         """Test successful user sign in."""
         mock_client = Mock()

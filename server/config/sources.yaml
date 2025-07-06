@@ -1,14 +1,28 @@
 sources:
-  - id: linkedin
+  # =============================================================================
+  # API-BASED SOURCES (No authentication, structured data)
+  # =============================================================================
+  
+  - id: linkedin_api
     name: LinkedIn
-    type: dynamic
-    search_url: "https://www.linkedin.com/jobs/search/?keywords={keyword}"
-    selectors:
-      job_selector: ".job-card-container"
-      title: ".artdeco-entity-lockup__title a"
-      company: ".artdeco-entity-lockup__subtitle span"
-      location: ".job-card-container__metadata-wrapper li span"
-    scroll_count: 5
+    type: api
+    api_url: "https://api.linkedin.com/v2/jobs?keywords={keyword}&count=50"
+    data_mapping:
+      title: "title"
+      company: "company.name"
+      location: "location.name"
+      date_posted: "listedAt"
+      url: "applicationMethod.standardizedUrl"
+      description: "description"
+      salary: "salaryInsights.medianSalary"
+    requires_auth: true
+    auth_note: "Requires LinkedIn API credentials (Client ID, Client Secret, Access Token)"
+
+
+  # =============================================================================
+  # STATIC SCRAPING SOURCES (Public HTML pages)
+  # =============================================================================
+
   - id: python_org
     name: Python.org
     type: static
@@ -19,16 +33,23 @@ sources:
       company: "span.listing-company-name"
       location: "span.listing-location a"
       date_posted: "span.listing-posted time"
-  - id: weworkremotely
-    name: WeWorkRemotely
-    type: static
-    search_url: "https://weworkremotely.com/remote-jobs/search?term={keyword}"
+      url: "span.listing-company-name a"
+
+  # =============================================================================
+  # SELENIUM-BASED SOURCES (Dynamic content, JavaScript-heavy)
+  # =============================================================================
+
+
+  - id: ziprecruiter
+    name: ZipRecruiter
+    type: dynamic
+    search_url: "https://www.ziprecruiter.com/candidate/search?search={keyword}&location=Remote"
     selectors:
-      job_selector: "div.new-listing"
-      title: "div.new-listing__header__title"
-      company: "p.new-listing__company-name"
-      location: "p.new-listing__company-headquarters"
-      date_posted: "p.new-listing__header__icons__date"
-      salary:
-        type: multiple
-        selector: "div.new-listing__categories__category"
+      job_selector: ".job_result"
+      title: ".job_title"
+      company: ".company_name"
+      location: ".location"
+      date_posted: ".job_age"
+      url: ".job_title a"
+    scroll_count: 3
+    requires_auth: false

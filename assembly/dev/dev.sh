@@ -10,10 +10,10 @@ fi
 
 # Build and start development environment
 echo "📦 Building development containers..."
-docker-compose -f docker-compose.dev.yml build
+docker-compose -f assembly/dev/docker-compose.dev.yml build
 
 echo "🔥 Starting services with auto-reload..."
-docker-compose -f docker-compose.dev.yml up
+docker-compose -f assembly/dev/docker-compose.dev.yml up
 
 echo "✅ Development environment started!"
 echo "🌐 Frontend: http://localhost:5173"

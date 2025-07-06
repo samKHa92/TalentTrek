@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-from src.data.processors import clean_job_posting, deduplicate_jobs
+from src.utils.processors import clean_job_posting, deduplicate_jobs
 from src.analysis.statistics import generate_basic_stats
 from src.analysis.trends import generate_time_trends
 from src.analysis.reports import generate_report
